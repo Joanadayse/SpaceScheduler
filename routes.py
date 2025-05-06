@@ -33,7 +33,7 @@ def register_routes(app):
             # Store user ID in session
             session['user_id'] = user.id
             session['user_name'] = user.name
-            flash(f'Welcome, {user.name}!', 'success')
+            flash(f'Bem-vindo(a), {user.name}!', 'success')
             return redirect(url_for('bookings'))
         
         return render_template('login.html', form=form)
@@ -42,7 +42,7 @@ def register_routes(app):
     def logout():
         """Logout user"""
         session.clear()
-        flash('You have been logged out', 'info')
+        flash('Você saiu do sistema', 'info')
         return redirect(url_for('login'))
     
     @app.route('/spaces')
@@ -71,7 +71,7 @@ def register_routes(app):
             )
             db.session.add(space)
             db.session.commit()
-            flash(f'Space "{space.name}" has been added', 'success')
+            flash(f'Espaço "{space.name}" foi adicionado com sucesso', 'success')
             return redirect(url_for('spaces'))
         
         return render_template('add_space.html', form=form)
@@ -88,7 +88,7 @@ def register_routes(app):
         if form.validate_on_submit():
             form.populate_obj(space)
             db.session.commit()
-            flash(f'Space "{space.name}" has been updated', 'success')
+            flash(f'Espaço "{space.name}" foi atualizado com sucesso', 'success')
             return redirect(url_for('spaces'))
         
         return render_template('edit_space.html', form=form, space=space)
@@ -116,7 +116,7 @@ def register_routes(app):
                     db.func.date(Booking.start_time) == filter_date.date()
                 )
             except ValueError:
-                flash('Invalid date format', 'error')
+                flash('Formato de data inválido', 'error')
         
         # Get all bookings (recent first)
         bookings = query.order_by(Booking.start_time.desc()).all()
@@ -222,7 +222,7 @@ def register_routes(app):
             )
             db.session.add(booking)
             db.session.commit()
-            flash('Booking has been added successfully', 'success')
+            flash('Reserva adicionada com sucesso', 'success')
             return redirect(url_for('bookings'))
         
         return render_template('add_booking.html', form=form)
