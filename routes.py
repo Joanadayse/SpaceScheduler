@@ -141,7 +141,7 @@ def register_routes(app):
     def get_bookings():
         """API endpoint to get bookings for calendar"""
         if 'user_id' not in session:
-            return jsonify({'error': 'Not authenticated'}), 401
+            return jsonify({'error': 'Não autenticado'}), 401
         
         space_id = request.args.get('space_id', type=int)
         start = request.args.get('start')
@@ -245,7 +245,7 @@ def register_routes(app):
         if form.validate_on_submit():
             form.populate_obj(booking)
             db.session.commit()
-            flash('Booking has been updated successfully', 'success')
+            flash('Reserva atualizada com sucesso', 'success')
             return redirect(url_for('bookings'))
         
         return render_template('edit_booking.html', form=form, booking=booking)
@@ -259,7 +259,7 @@ def register_routes(app):
         booking = Booking.query.get_or_404(booking_id)
         db.session.delete(booking)
         db.session.commit()
-        flash('Booking has been deleted successfully', 'success')
+        flash('Reserva excluída com sucesso', 'success')
         
         # If the request came from an AJAX call, return JSON
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
