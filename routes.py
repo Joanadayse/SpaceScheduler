@@ -1,0 +1,287 @@
+from flask import render_template, redirect, url_for, flash, request, jsonify, session
+from app import db
+from models import User, Space, Booking
+from forms import LoginForm, SpaceForm, BookingForm
+from datetime import datetime, timedelta
+import logging
+
+
+def register_routes(app):
+    @app.route('/')
+    def index():
+        """Home page - redirects to login if not logged in, otherwise to bookings"""
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        return redirect(url_for('bookings'))
+    
+    @app.route('/login', methods=['GET', 'POST'])
+    def login():
+        """Login page"""
+        form = LoginForm()
+        
+        if form.validate_on_submit():
+            # Check if the user exists, if not create a new user
+            user = User.query.filter_by(email=form.email.data).first()
+            
+            if not user:
+                # Create new user
+                user = User(name=form.name.data, email=form.email.data)
+                db.session.add(user)
+                db.session.commit()
+                logging.debug(f"Created new user: {user.name} ({user.email})")
+            
+            # Store user ID in session
+            session['user_id'] = user.id
+            session['user_name'] = user.name
+            flash(f'Welcome, {user.name}!', 'success')
+            return redirect(url_for('bookings'))
+        
+        return render_template('login.html', form=form)
+    
+    @app.route('/logout')
+    def logout():
+        """Logout user"""
+        session.clear()
+        flash('You have been logged out', 'info')
+        return redirect(url_for('login'))
+    
+    @app.route('/spaces')
+    def spaces():
+        """List all spaces"""
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        
+        spaces = Space.query.all()
+        return render_template('spaces.html', spaces=spaces)
+    
+    @app.route('/spaces/add', methods=['GET', 'POST'])
+    def add_space():
+        """Add a new space"""
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        
+        form = SpaceForm()
+        
+        if form.validate_on_submit():
+            space = Space(
+                name=form.name.data,
+                type=form.type.data,
+                capacity=form.capacity.data,
+                resources=form.resources.data
+            )
+            db.session.add(space)
+            db.session.commit()
+            flash(f'Space "{space.name}" has been added', 'success')
+            return redirect(url_for('spaces'))
+        
+        return render_template('add_space.html', form=form)
+    
+    @app.route('/spaces/edit/<int:space_id>', methods=['GET', 'POST'])
+    def edit_space(space_id):
+        """Edit an existing space"""
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        
+        space = Space.query.get_or_404(space_id)
+        form = SpaceForm(obj=space)
+        
+        if form.validate_on_submit():
+            form.populate_obj(space)
+            db.session.commit()
+            flash(f'Space "{space.name}" has been updated', 'success')
+            return redirect(url_for('spaces'))
+        
+        return render_template('edit_space.html', form=form, space=space)
+    
+    @app.route('/bookings')
+    def bookings():
+        """List bookings in a list view"""
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        
+        # Get filter parameters
+        space_id = request.args.get('space_id', type=int)
+        date_str = request.args.get('date')
+        
+        # Build query
+        query = Booking.query
+        
+        if space_id:
+            query = query.filter_by(space_id=space_id)
+        
+        if date_str:
+            try:
+                filter_date = datetime.strptime(date_str, '%Y-%m-%d')
+                query = query.filter(
+                    db.func.date(Booking.start_time) == filter_date.date()
+                )
+            except ValueError:
+                flash('Invalid date format', 'error')
+        
+        # Get all bookings (recent first)
+        bookings = query.order_by(Booking.start_time.desc()).all()
+        
+        # Get all spaces for filter dropdown
+        spaces = Space.query.all()
+        
+        return render_template('bookings.html', bookings=bookings, spaces=spaces, selected_space=space_id, selected_date=date_str)
+    
+    @app.route('/calendar')
+    def calendar():
+        """Calendar view of bookings"""
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        
+        spaces = Space.query.all()
+        space_id = request.args.get('space_id', type=int)
+        
+        return render_template('calendar.html', spaces=spaces, selected_space=space_id)
+    
+    @app.route('/api/bookings')
+    def get_bookings():
+        """API endpoint to get bookings for calendar"""
+        if 'user_id' not in session:
+            return jsonify({'error': 'Not authenticated'}), 401
+        
+        space_id = request.args.get('space_id', type=int)
+        start = request.args.get('start')
+        end = request.args.get('end')
+        
+        # Build query
+        query = Booking.query
+        
+        if space_id:
+            query = query.filter_by(space_id=space_id)
+        
+        if start:
+            start_date = datetime.fromisoformat(start.replace('Z', '+00:00'))
+            query = query.filter(Booking.end_time >= start_date)
+        
+        if end:
+            end_date = datetime.fromisoformat(end.replace('Z', '+00:00'))
+            query = query.filter(Booking.start_time <= end_date)
+        
+        bookings = query.all()
+        
+        events = []
+        for booking in bookings:
+            space = Space.query.get(booking.space_id)
+            user = User.query.get(booking.user_id)
+            
+            events.append({
+                'id': booking.id,
+                'title': booking.title,
+                'start': booking.start_time.isoformat(),
+                'end': booking.end_time.isoformat(),
+                'extendedProps': {
+                    'space': space.name,
+                    'description': booking.description,
+                    'user': user.name,
+                    'spaceId': space.id,
+                    'userId': user.id
+                }
+            })
+        
+        return jsonify(events)
+    
+    @app.route('/bookings/add', methods=['GET', 'POST'])
+    def add_booking():
+        """Add a new booking"""
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        
+        form = BookingForm()
+        
+        # Set choices for space_id
+        form.space_id.choices = [(s.id, s.name) for s in Space.query.all()]
+        
+        # If start date and time were provided in query parameters, use them
+        start_str = request.args.get('start')
+        if start_str and request.method == 'GET':
+            try:
+                start_time = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+                end_time = start_time + timedelta(hours=1)
+                form.start_time.data = start_time
+                form.end_time.data = end_time
+            except (ValueError, TypeError):
+                pass  # Invalid format, ignore
+        
+        # If space_id was provided in query parameters, select it
+        space_id = request.args.get('space_id', type=int)
+        if space_id and request.method == 'GET':
+            form.space_id.data = space_id
+        
+        if form.validate_on_submit():
+            booking = Booking(
+                user_id=session['user_id'],
+                space_id=form.space_id.data,
+                title=form.title.data,
+                description=form.description.data,
+                start_time=form.start_time.data,
+                end_time=form.end_time.data
+            )
+            db.session.add(booking)
+            db.session.commit()
+            flash('Booking has been added successfully', 'success')
+            return redirect(url_for('bookings'))
+        
+        return render_template('add_booking.html', form=form)
+    
+    @app.route('/bookings/edit/<int:booking_id>', methods=['GET', 'POST'])
+    def edit_booking(booking_id):
+        """Edit an existing booking"""
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        
+        booking = Booking.query.get_or_404(booking_id)
+        form = BookingForm(obj=booking)
+        
+        # Set choices for space_id
+        form.space_id.choices = [(s.id, s.name) for s in Space.query.all()]
+        
+        # Set the booking_id for conflict validation
+        form.booking_id.data = booking_id
+        
+        if form.validate_on_submit():
+            form.populate_obj(booking)
+            db.session.commit()
+            flash('Booking has been updated successfully', 'success')
+            return redirect(url_for('bookings'))
+        
+        return render_template('edit_booking.html', form=form, booking=booking)
+    
+    @app.route('/bookings/delete/<int:booking_id>', methods=['POST'])
+    def delete_booking(booking_id):
+        """Delete a booking"""
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        
+        booking = Booking.query.get_or_404(booking_id)
+        db.session.delete(booking)
+        db.session.commit()
+        flash('Booking has been deleted successfully', 'success')
+        
+        # If the request came from an AJAX call, return JSON
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return jsonify(success=True)
+        
+        return redirect(url_for('bookings'))
+    
+    @app.route('/history')
+    def history():
+        """View booking history for the current user"""
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        
+        user_id = session['user_id']
+        bookings = Booking.query.filter_by(user_id=user_id).order_by(Booking.start_time.desc()).all()
+        
+        return render_template('history.html', bookings=bookings)
+    
+    @app.context_processor
+    def inject_user():
+        """Make user info and current datetime available to all templates"""
+        user = None
+        if 'user_id' in session:
+            user = User.query.get(session['user_id'])
+        return {'current_user': user, 'now': datetime.now()}

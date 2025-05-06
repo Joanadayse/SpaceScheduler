@@ -1,0 +1,78 @@
+/* Custom styles to complement Bootstrap theme */
+
+/* Background color for different space types */
+.bg-coworking {
+    background-color: var(--bs-info);
+}
+
+.bg-auditorium {
+    background-color: var(--bs-warning);
+}
+
+.bg-meeting-room {
+    background-color: var(--bs-success);
+}
+
+/* Calendar event styling */
+.fc-event {
+    border-radius: 3px;
+    font-size: 0.85em;
+    border-width: 0;
+}
+
+.fc-event-title {
+    font-weight: 500;
+}
+
+.fc-daygrid-event {
+    white-space: normal;
+}
+
+/* Better spacing for mobile */
+@media (max-width: 767.98px) {
+    .fc .fc-toolbar {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .fc .fc-toolbar-title {
+        font-size: 1.2rem;
+    }
+}
+
+/* Improve form styling */
+.form-control:focus, .form-select:focus {
+    border-color: var(--bs-primary);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-primary-rgb), 0.25);
+}
+
+/* Space cards hover effect */
+.card {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Custom badge style for space types */
+.badge.bg-info, .badge.bg-warning, .badge.bg-success {
+    font-weight: 500;
+}
+
+/* Datetime picker fix */
+.flatpickr-calendar {
+    z-index: 1060 !important;
+}
+
+/* Improve table responsiveness */
+.table-responsive {
+    margin-bottom: 0;
+}
+
+/* Footer styling */
+footer {
+    position: relative;
+    margin-top: 2rem;
+}
