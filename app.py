@@ -47,3 +47,5 @@ with app.app_context():
     # Import and register routes
     from routes import register_routes
     register_routes(app)
+
+
