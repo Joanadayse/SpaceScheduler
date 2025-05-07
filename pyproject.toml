@@ -14,4 +14,8 @@ dependencies = [
     "wtforms>=3.2.1",
     "flask-wtf>=1.2.2",
     "sqlalchemy>=2.0.40",
+
 ]
+
+[tool.poetry]
+package-mode = false 

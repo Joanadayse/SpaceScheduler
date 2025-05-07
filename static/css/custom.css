@@ -76,3 +76,20 @@ footer {
     position: relative;
     margin-top: 2rem;
 }
+
+.navbar-custom {
+    background-color: #F5ECF4; 
+    color: #8A227E;
+}
+
+.navbar-custom {
+    background-color: #F5ECF4; /* sua cor personalizada */
+}
+
+.navbar-custom .navbar-brand,
+.navbar-custom .nav-link,
+.navbar-custom .nav-link i,
+.navbar-custom .navbar-toggler-icon {
+    color: #8A227E !important;
+}
+

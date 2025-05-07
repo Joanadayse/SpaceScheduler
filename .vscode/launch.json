@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "node", // ou "python", "cppdbg", etc.
+            "request": "launch",
+            "name": "Iniciar Programa",
+            "program": "${workspaceFolder}/app.js", // caminho para o seu arquivo principal
+            "outFiles": [
+                "${workspaceFolder}/**/*.js"
+            ],
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen"
+        }
+    ]
+}
