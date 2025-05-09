@@ -4,6 +4,27 @@ from models import User, Space, Booking
 from forms import LoginForm, SpaceForm, BookingForm
 from datetime import datetime, timedelta
 import logging
+from flask import Response
+from ics import Calendar, Event
+from datetime import datetime
+from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas
+from io import BytesIO
+import datetime
+
+
+from io import BytesIO
+from datetime import datetime
+
+def get_turno(hour):
+            if 8 <= hour < 12:
+                return "Manhã"
+            elif 13 <= hour < 17:
+                return "Tarde"
+            elif 18 <= hour < 22:
+                return "Noite"
+            else:
+                return "Fora do horário"
 
 
 def register_routes(app):
@@ -137,6 +158,55 @@ def register_routes(app):
         
         return render_template('calendar.html', spaces=spaces, selected_space=space_id)
     
+    # @app.route('/api/bookings')
+    # def get_bookings():
+    #     """API endpoint to get bookings for calendar"""
+    #     if 'user_id' not in session:
+    #         return jsonify({'error': 'Não autenticado'}), 401
+        
+    #     space_id = request.args.get('space_id', type=int)
+    #     start = request.args.get('start')
+    #     end = request.args.get('end')
+        
+    #     # Build query
+    #     query = Booking.query
+        
+    #     if space_id:
+    #         query = query.filter_by(space_id=space_id)
+        
+    #     if start:
+    #         start_date = datetime.fromisoformat(start.replace('Z', '+00:00'))
+    #         query = query.filter(Booking.end_time >= start_date)
+        
+    #     if end:
+    #         end_date = datetime.fromisoformat(end.replace('Z', '+00:00'))
+    #         query = query.filter(Booking.start_time <= end_date)
+        
+    #     bookings = query.all()
+        
+    #     events = []
+    #     for booking in bookings:
+    #         space = Space.query.get(booking.space_id)
+    #         user = User.query.get(booking.user_id)
+            
+    #         events.append({
+    #             'id': booking.id,
+    #             'title': booking.title,
+    #             'start': booking.start_time.isoformat(),
+    #             'end': booking.end_time.isoformat(),
+    #             'extendedProps': {
+    #                 'space': space.name,
+    #                 'description': booking.description,
+    #                 'user': user.name,
+    #                 'spaceId': space.id,
+    #                 'userId': user.id
+    #             }
+    #         })
+        
+    #     return jsonify(events)
+
+      
+
     @app.route('/api/bookings')
     def get_bookings():
         """API endpoint to get bookings for calendar"""
@@ -168,9 +238,12 @@ def register_routes(app):
             space = Space.query.get(booking.space_id)
             user = User.query.get(booking.user_id)
             
+            # Obtenha o turno
+            turno = get_turno(booking.start_time.hour)
+            
             events.append({
                 'id': booking.id,
-                'title': booking.title,
+                'title': f"{booking.title} ({turno})",  # Inclui o turno no título
                 'start': booking.start_time.isoformat(),
                 'end': booking.end_time.isoformat(),
                 'extendedProps': {
@@ -184,48 +257,97 @@ def register_routes(app):
         
         return jsonify(events)
     
-    @app.route('/bookings/add', methods=['GET', 'POST'])
-    def add_booking():
-        """Add a new booking"""
-        if 'user_id' not in session:
-            return redirect(url_for('login'))
+    # @app.route('/bookings/add', methods=['GET', 'POST'])
+    # def add_booking():
+    #     """Add a new booking"""
+    #     if 'user_id' not in session:
+    #         return redirect(url_for('login'))
         
-        form = BookingForm()
+    #     form = BookingForm()
         
-        # Set choices for space_id
-        form.space_id.choices = [(s.id, s.name) for s in Space.query.all()]
+    #     # Set choices for space_id
+    #     form.space_id.choices = [(s.id, s.name) for s in Space.query.all()]
         
-        # If start date and time were provided in query parameters, use them
-        start_str = request.args.get('start')
-        if start_str and request.method == 'GET':
-            try:
-                start_time = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
-                end_time = start_time + timedelta(hours=1)
-                form.start_time.data = start_time
-                form.end_time.data = end_time
-            except (ValueError, TypeError):
-                pass  # Invalid format, ignore
+    #     # If start date and time were provided in query parameters, use them
+    #     start_str = request.args.get('start')
+    #     if start_str and request.method == 'GET':
+    #         try:
+    #             start_time = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+    #             end_time = start_time + timedelta(hours=1)
+    #             form.start_time.data = start_time
+    #             form.end_time.data = end_time
+    #         except (ValueError, TypeError):
+    #             pass  # Invalid format, ignore
         
-        # If space_id was provided in query parameters, select it
-        space_id = request.args.get('space_id', type=int)
-        if space_id and request.method == 'GET':
-            form.space_id.data = space_id
+    #     # If space_id was provided in query parameters, select it
+    #     space_id = request.args.get('space_id', type=int)
+    #     if space_id and request.method == 'GET':
+    #         form.space_id.data = space_id
         
-        if form.validate_on_submit():
-            booking = Booking(
-                user_id=session['user_id'],
-                space_id=form.space_id.data,
-                title=form.title.data,
-                description=form.description.data,
-                start_time=form.start_time.data,
-                end_time=form.end_time.data
-            )
-            db.session.add(booking)
-            db.session.commit()
-            flash('Reserva adicionada com sucesso', 'success')
-            return redirect(url_for('bookings'))
+    #     if form.validate_on_submit():
+    #         booking = Booking(
+    #             user_id=session['user_id'],
+    #             space_id=form.space_id.data,
+    #             title=form.title.data,
+    #             description=form.description.data,
+    #             start_time=form.start_time.data,
+    #             end_time=form.end_time.data
+    #         )
+    #         db.session.add(booking)
+    #         db.session.commit()
+    #         flash('Reserva adicionada com sucesso', 'success')
+    #         return redirect(url_for('bookings'))
         
-        return render_template('add_booking.html', form=form)
+    #     return render_template('add_booking.html', form=form)
+
+    # @app.route('/bookings/add', methods=['GET', 'POST'])
+    # def add_booking():
+    #     """Add a new booking"""
+    #     if 'user_id' not in session:
+    #         return redirect(url_for('login'))
+        
+    #     form = BookingForm()
+        
+    #     # Set choices for space_id
+    #     form.space_id.choices = [(s.id, s.name) for s in Space.query.all()]
+        
+    #     # If start date and time were provided in query parameters, use them
+    #     start_str = request.args.get('start')
+    #     if start_str and request.method == 'GET':
+    #         try:
+    #             start_time = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+    #             end_time = start_time + timedelta(hours=1)
+    #             form.start_time.data = start_time
+    #             form.end_time.data = end_time
+    #         except (ValueError, TypeError):
+    #             pass  # Invalid format, ignore
+        
+    #     # If space_id was provided in query parameters, select it
+    #     space_id = request.args.get('space_id', type=int)
+    #     if space_id and request.method == 'GET':
+    #         form.space_id.data = space_id
+        
+    #     if form.validate_on_submit():
+    #         # Validação para garantir que a reserva esteja dentro de um turno
+    #         if form.start_time.data.hour < 8 or form.start_time.data.hour >= 22:
+    #             flash('A reserva deve estar dentro do horário permitido (08:00 - 22:00)', 'error')
+    #             return render_template('add_booking.html', form=form)
+
+    #         booking = Booking(
+    #             user_id=session['user_id'],
+    #             space_id=form.space_id.data,
+    #             title=form.title.data,
+    #             description=form.description.data,
+    #             start_time=form.start_time.data,
+    #             end_time=form.end_time.data
+    #         )
+    #         db.session.add(booking)
+    #         db.session.commit()
+    #         flash('Reserva adicionada com sucesso', 'success')
+    #         return redirect(url_for('bookings'))
+        
+    #     return render_template('add_booking.html', form=form)
+
     
     @app.route('/bookings/edit/<int:booking_id>', methods=['GET', 'POST'])
     def edit_booking(booking_id):
@@ -285,3 +407,94 @@ def register_routes(app):
         if 'user_id' in session:
             user = User.query.get(session['user_id'])
         return {'current_user': user, 'now': datetime.now()}
+    
+    
+
+
+    @app.route('/export_bookings_pdf')
+    def export_bookings_pdf():
+        bookings = [
+            {
+                'space_name': 'Sala 1',
+                'title': 'Reunião de Projeto',
+                'date': '2025-05-10',
+                'time': '10:00 - 12:00',
+                'responsible': 'Alice',
+            },
+            # Adicione mais reservas conforme necessário
+        ]
+
+        # Cria um buffer em memória para o PDF
+        buffer = BytesIO()
+        c = canvas.Canvas(buffer, pagesize=letter)
+        c.setFont("Helvetica", 12)
+
+        y = 750  # Posição vertical inicial
+        for booking in bookings:
+            c.drawString(100, y, f"Espaço: {booking['space_name']}")
+            c.drawString(100, y - 20, f"Título: {booking['title']}")
+            c.drawString(100, y - 40, f"Data: {booking['date']}")
+            c.drawString(100, y - 60, f"Horário: {booking['time']}")
+            c.drawString(100, y - 80, f"Responsável: {booking['responsible']}")
+            y -= 100  # Espaço entre as reservas
+
+        c.save()
+        buffer.seek(0)  # Rewind the buffer to the beginning
+
+        response = Response(buffer.getvalue(), content_type='application/pdf')
+        response.headers['Content-Disposition'] = 'attachment; filename=reservas.pdf'
+        return response
+
+    @app.route('/bookings/add', methods=['GET', 'POST'])
+    def add_booking():
+        """Add a new booking"""
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        
+        form = BookingForm()
+        
+        # Set choices for space_id
+        form.space_id.choices = [(s.id, s.name) for s in Space.query.all()]
+        
+        # If start date and time were provided in query parameters, use them
+        start_str = request.args.get('start')
+        if start_str and request.method == 'GET':
+            try:
+                start_time = datetime.fromisoformat(start_str.replace('Z', '+00:00'))
+                end_time = start_time + timedelta(hours=1)
+                form.start_time.data = start_time
+                form.end_time.data = end_time
+            except (ValueError, TypeError):
+                pass  # Invalid format, ignore
+        
+        # If space_id was provided in query parameters, select it
+        space_id = request.args.get('space_id', type=int)
+        if space_id and request.method == 'GET':
+            form.space_id.data = space_id
+        
+        if form.validate_on_submit():
+            # Validação para garantir que a reserva esteja dentro de um turno
+            if form.start_time.data.hour < 8 or form.start_time.data.hour >= 22:
+                flash('A reserva deve estar dentro do horário permitido (08:00 - 22:00)', 'error')
+                return render_template('add_booking.html', form=form)
+
+            booking = Booking(
+                user_id=session['user_id'],
+                space_id=form.space_id.data,
+                title=form.title.data,
+                description=form.description.data,
+                start_time=form.start_time.data,
+                end_time=form.end_time.data
+            )
+            db.session.add(booking)
+            db.session.commit()
+            flash('Reserva adicionada com sucesso', 'success')
+            return redirect(url_for('bookings'))
+        
+        return render_template('add_booking.html', form=form)
+
+        
+            
+
+
+

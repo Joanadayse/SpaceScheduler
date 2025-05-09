@@ -41,8 +41,28 @@
                             </div>
                         {% endif %}
                     </div>
-                    
                     <div class="row mb-3">
+    <div class="col-md-6">
+        <label class="form-label">Turno de Início</label>
+        <select name="turno_inicio" class="form-select" required>
+            <option value="manha">Manhã (08:00 - 12:00)</option>
+            <option value="tarde">Tarde (13:00 - 17:00)</option>
+            <option value="noite">Noite (18:00 - 22:00)</option>
+        </select>
+    </div>
+    <!-- <div class="col-md-6">
+        <label class="form-label">Turno de Fim</label>
+        <select name="turno_fim" class="form-select" required>
+            <option value="manha">Manhã (08:00 - 12:00)</option>
+            <option value="tarde">Tarde (13:00 - 17:00)</option>
+            <option value="noite">Noite (18:00 - 22:00)</option>
+        </select>
+    </div> -->
+</div>
+
+
+                    
+                    <!-- <div class="row mb-3">
                         <div class="col-md-6">
                             {{ form.start_time.label(class="form-label") }}
                             {{ form.start_time(class="form-control datetime-picker" + (" is-invalid" if form.start_time.errors else "")) }}
@@ -65,7 +85,7 @@
                                 </div>
                             {% endif %}
                         </div>
-                    </div>
+                    </div> -->
                     
                     <div class="mb-4">
                         {{ form.description.label(class="form-label") }}

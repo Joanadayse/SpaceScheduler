@@ -77,19 +77,38 @@ footer {
     margin-top: 2rem;
 }
 
-.navbar-custom {
-    background-color: #F5ECF4; 
-    color: #8A227E;
-}
+
 
 .navbar-custom {
-    background-color: #F5ECF4; /* sua cor personalizada */
+    background-color: #4F23FF;
+    padding-top: 1rem;
+    padding-bottom: 1rem;
+    font-size: 1.1rem;
+    color: white;
+    font-family: sans-serif;
+    font-weight: 700;
 }
 
 .navbar-custom .navbar-brand,
 .navbar-custom .nav-link,
 .navbar-custom .nav-link i,
 .navbar-custom .navbar-toggler-icon {
-    color: #8A227E !important;
+    color: white !important;
 }
+
+
+
+.navbar-logo {
+    height: 60px; /* Ajuste conforme o tamanho desejado da logo */
+    width: auto;
+}
+
+#calendar{
+    background-image: url('static\img\logo4.png'); 
+    /* background-color: blue; */
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
 
