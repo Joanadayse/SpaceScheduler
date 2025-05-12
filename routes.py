@@ -1,39 +1,35 @@
+
+
+
 from flask import render_template, redirect, url_for, flash, request, jsonify, session
 from app import db
 from models import User, Space, Booking
 from forms import LoginForm, SpaceForm, BookingForm
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta
 import logging
 from flask import Response
 from ics import Calendar, Event
-from datetime import datetime
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
 from io import BytesIO
-import datetime
-from datetime import time
-from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
 from reportlab.lib import colors
 
 
-from io import BytesIO
-from datetime import datetime
 
 
 TURNOS = [
     (time(8, 0), time(12, 0)),  # Turno 1: 08:00 - 12:00
-    (time(12, 0), time(18, 0)),  # Turno 2: 12:00 - 18:00
-    (time(18, 0), time(22, 0))   # Turno 3: 18:00 - 22:00
+    (time(12, 0), time(17, 0)),  # Turno 2: 12:00 - 17:00
+    (time(17, 0), time(22, 0))   # Turno 3: 17:00 - 22:00
 ]
-
 
 def check_turno(start_time, end_time):
     """Verifica se a reserva está dentro de um dos turnos definidos."""
     for turno_inicio, turno_fim in TURNOS:
         if turno_inicio <= start_time.time() < turno_fim and turno_inicio < end_time.time() <= turno_fim:
             return True
-    return False          
+    return False    
 
 
 def register_routes(app):
@@ -326,46 +322,8 @@ def register_routes(app):
                         content_type='application/pdf',
                         headers={'Content-Disposition': 'attachment; filename=reservas.pdf'})
 
-    # @app.route('/export_bookings_pdf')
-    # def export_bookings_pdf():
-    #     bookings = Booking.query.order_by(Booking.start_time).all()
-
-    #     # Cria um buffer em memória para o PDF
-    #     buffer = BytesIO()
-    #     c = canvas.Canvas(buffer, pagesize=letter)
-    #     c.setFont("Helvetica", 12)
-
-    #     y = 750  # Posição vertical inicial
-
-    #     for booking in bookings:
-    #         # Formata as datas/horários
-    #         date_str = booking.start_time.strftime('%d/%m/%Y')
-    #         time_str = f"{booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}"
-    #         responsible = booking.user.name if booking.user else 'N/A'
-    #         space_name = booking.space.name if booking.space else 'N/A'
-
-    #         # Adiciona ao PDF
-    #         c.drawString(100, y, f"Espaço: {space_name}")
-    #         c.drawString(100, y - 20, f"Título: {booking.title}")
-    #         c.drawString(100, y - 40, f"Data: {date_str}")
-    #         c.drawString(100, y - 60, f"Horário: {time_str}")
-    #         c.drawString(100, y - 80, f"Responsável: {responsible}")
-    #         y -= 100
-
-    #         # Quebra de página se necessário
-    #         if y < 100:
-    #             c.showPage()
-    #             c.setFont("Helvetica", 12)
-    #             y = 750
-
-    #     c.save()
-    #     buffer.seek(0)
-
-    #     return Response(buffer.getvalue(),
-    #                     content_type='application/pdf',
-    #                     headers={'Content-Disposition': 'attachment; filename=reservas.pdf'})
-
   
+
 
 
     @app.route('/bookings/add', methods=['GET', 'POST'])
@@ -381,7 +339,7 @@ def register_routes(app):
             turn_map = {
                 'manha': (datetime.strptime('08:00', '%H:%M').time(), datetime.strptime('12:00', '%H:%M').time()),
                 'tarde': (datetime.strptime('12:00', '%H:%M').time(), datetime.strptime('17:00', '%H:%M').time()),
-                'noite': (datetime.strptime('17:00', '%H:%M').time(), datetime.strptime('22:00', '%H:%M').time())
+                'dia_inteiro': (datetime.strptime('08:00', '%H:%M').time(), datetime.strptime('17:00', '%H:%M').time())
             }
 
             # Obter o turno selecionado
@@ -415,3 +373,4 @@ def register_routes(app):
             return redirect(url_for('bookings'))
 
         return render_template('add_booking.html', form=form)
+
