@@ -1,12 +1,11 @@
 import os
 import logging
-
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import DeclarativeBase
-from flask_session import Session
+from flask_session import Session 
 from werkzeug.middleware.proxy_fix import ProxyFix
-
+from flask_migrate import Migrate  # Importar Flask-Migrate
 
 # Configure logging
 logging.basicConfig(level=logging.DEBUG)
@@ -14,8 +13,8 @@ logging.basicConfig(level=logging.DEBUG)
 class Base(DeclarativeBase):
     pass
 
-
 db = SQLAlchemy(model_class=Base)
+
 # create the app
 app = Flask(__name__)
 app.secret_key = os.environ.get("SESSION_SECRET", "default_secret_key")
@@ -37,15 +36,16 @@ app.config["SESSION_PERMANENT"] = False
 db.init_app(app)
 Session(app)
 
+# Adicionar a configuração do Flask-Migrate
+migrate = Migrate(app, db)  # Instancia o Migrate, associando o app e o db
+
 with app.app_context():
     # Import models
     import models  # noqa: F401
     
-    # Create database tables
-    db.create_all()
+    # Create database tables (se necessário, mas com migrações o recomendado é rodar os comandos de migração)
+    # db.create_all()  # Não é mais necessário, pois usaremos migrações
 
     # Import and register routes
     from routes import register_routes
     register_routes(app)
-
-
