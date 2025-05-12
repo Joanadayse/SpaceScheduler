@@ -12,6 +12,9 @@ from reportlab.pdfgen import canvas
 from io import BytesIO
 import datetime
 from datetime import time
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+from reportlab.lib import colors
 
 
 from io import BytesIO
@@ -280,21 +283,52 @@ def register_routes(app):
             user = User.query.get(session['user_id'])
         return {'current_user': user, 'now': datetime.now()}
     
-    
+    @app.route('/export_bookings_pdf')
+    def export_bookings_pdf():
+        bookings = Booking.query.order_by(Booking.start_time).all()
 
+        # Cria o documento PDF
+        buffer = BytesIO()
+        doc = SimpleDocTemplate(buffer, pagesize=letter)
+        elements = []
+
+        # Cria a tabela
+        table_data = [["Espaço", "Título", "Data", "Horário", "Responsável"]]
+        for booking in bookings:
+            date_str = booking.start_time.strftime('%d/%m/%Y')
+            time_str = f"{booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}"
+            responsible = booking.user.name if booking.user else 'N/A'
+            space_name = booking.space.name if booking.space else 'N/A'
+            table_data.append([space_name, booking.title, date_str, time_str, responsible])
+
+        table = Table(table_data)
+
+        # Estilize a tabela
+        style = TableStyle([
+            ("BACKGROUND", (0,0), (-1,0), colors.grey),
+            ("TEXTCOLOR", (0,0), (-1,0), colors.whitesmoke),
+            ("ALIGN", (0,0), (-1,-1), "CENTER"),
+            ("FONTNAME", (0,0), (-1,0), "Helvetica-Bold"),
+            ("FONTSIZE", (0,0), (-1,0), 14),
+            ("BOTTOMPADDING", (0,0), (-1,0), 12),
+            ("BACKGROUND", (0,1), (-1,-1), colors.beige),
+            ("GRID", (0,0), (-1,-1), 1, colors.black)
+        ])
+
+        table.setStyle(style)
+        elements.append(table)
+
+        # Gere o PDF
+        doc.build(elements)
+        buffer.seek(0)
+
+        return Response(buffer.getvalue(),
+                        content_type='application/pdf',
+                        headers={'Content-Disposition': 'attachment; filename=reservas.pdf'})
 
     # @app.route('/export_bookings_pdf')
     # def export_bookings_pdf():
-    #     bookings = [
-    #         {
-    #             'space_name': 'Sala 1',
-    #             'title': 'Reunião de Projeto',
-    #             'date': '2025-05-10',
-    #             'time': '10:00 - 12:00',
-    #             'responsible': 'Alice',
-    #         },
-    #         # Adicione mais reservas conforme necessário
-    #     ]
+    #     bookings = Booking.query.order_by(Booking.start_time).all()
 
     #     # Cria um buffer em memória para o PDF
     #     buffer = BytesIO()
@@ -302,60 +336,34 @@ def register_routes(app):
     #     c.setFont("Helvetica", 12)
 
     #     y = 750  # Posição vertical inicial
+
     #     for booking in bookings:
-    #         c.drawString(100, y, f"Espaço: {booking['space_name']}")
-    #         c.drawString(100, y - 20, f"Título: {booking['title']}")
-    #         c.drawString(100, y - 40, f"Data: {booking['date']}")
-    #         c.drawString(100, y - 60, f"Horário: {booking['time']}")
-    #         c.drawString(100, y - 80, f"Responsável: {booking['responsible']}")
-    #         y -= 100  # Espaço entre as reservas
+    #         # Formata as datas/horários
+    #         date_str = booking.start_time.strftime('%d/%m/%Y')
+    #         time_str = f"{booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}"
+    #         responsible = booking.user.name if booking.user else 'N/A'
+    #         space_name = booking.space.name if booking.space else 'N/A'
+
+    #         # Adiciona ao PDF
+    #         c.drawString(100, y, f"Espaço: {space_name}")
+    #         c.drawString(100, y - 20, f"Título: {booking.title}")
+    #         c.drawString(100, y - 40, f"Data: {date_str}")
+    #         c.drawString(100, y - 60, f"Horário: {time_str}")
+    #         c.drawString(100, y - 80, f"Responsável: {responsible}")
+    #         y -= 100
+
+    #         # Quebra de página se necessário
+    #         if y < 100:
+    #             c.showPage()
+    #             c.setFont("Helvetica", 12)
+    #             y = 750
 
     #     c.save()
-    #     buffer.seek(0)  # Rewind the buffer to the beginning
+    #     buffer.seek(0)
 
-    #     response = Response(buffer.getvalue(), content_type='application/pdf')
-    #     response.headers['Content-Disposition'] = 'attachment; filename=reservas.pdf'
-    #     return response
-
-
-    @app.route('/export_bookings_pdf')
-    def export_bookings_pdf():
-        bookings = Booking.query.order_by(Booking.start_time).all()
-
-        # Cria um buffer em memória para o PDF
-        buffer = BytesIO()
-        c = canvas.Canvas(buffer, pagesize=letter)
-        c.setFont("Helvetica", 12)
-
-        y = 750  # Posição vertical inicial
-
-        for booking in bookings:
-            # Formata as datas/horários
-            date_str = booking.start_time.strftime('%d/%m/%Y')
-            time_str = f"{booking.start_time.strftime('%H:%M')} - {booking.end_time.strftime('%H:%M')}"
-            responsible = booking.user.name if booking.user else 'N/A'
-            space_name = booking.space.name if booking.space else 'N/A'
-
-            # Adiciona ao PDF
-            c.drawString(100, y, f"Espaço: {space_name}")
-            c.drawString(100, y - 20, f"Título: {booking.title}")
-            c.drawString(100, y - 40, f"Data: {date_str}")
-            c.drawString(100, y - 60, f"Horário: {time_str}")
-            c.drawString(100, y - 80, f"Responsável: {responsible}")
-            y -= 100
-
-            # Quebra de página se necessário
-            if y < 100:
-                c.showPage()
-                c.setFont("Helvetica", 12)
-                y = 750
-
-        c.save()
-        buffer.seek(0)
-
-        return Response(buffer.getvalue(),
-                        content_type='application/pdf',
-                        headers={'Content-Disposition': 'attachment; filename=reservas.pdf'})
+    #     return Response(buffer.getvalue(),
+    #                     content_type='application/pdf',
+    #                     headers={'Content-Disposition': 'attachment; filename=reservas.pdf'})
 
   
 
